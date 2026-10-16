@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Correlation Network Studio — Full-Stack Graph Analytics</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+  <link rel="stylesheet" href="/static/css/styles.css">
+</head>
+<body>
+
+  <div id="file-protocol-warning" style="display:none;background:#fef3c7;border-bottom:1px solid #f59e0b;padding:12px 24px;color:#92400e;font-size:14px;text-align:center;font-weight:500;">
+    ⚠️ You opened this file directly from your disk (<code>file://</code>). Browsers block API calls and module imports under this mode. Please run <code>start.bat</code> or visit <a href="http://127.0.0.1:8000" style="color:#b45309;text-decoration:underline;font-weight:bold;">http://127.0.0.1:8000</a> to connect with the backend and database.
+  </div>
+  <script>
+    if (window.location.protocol === 'file:') {
+      document.getElementById('file-protocol-warning').style.display = 'block';
+    }
+  </script>
+
+  <!-- App Header -->
+  <header>
+    <div class="brand">
+      <h1>Correlation Network Studio</h1>
+      <p id="dataset-desc">Interactive correlation graphs and statistical dependency analysis.</p>
+    </div>
+
+    <div class="header-actions">
+      <!-- Dataset Selector -->
+      <div class="select-wrapper">
+        <select id="dataset-select" title="Select Dataset"></select>
+      </div>
+
+      <!-- Upload Button -->
+      <button class="btn btn-primary" id="btn-open-upload">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        Upload CSV
+      </button>
+
+      <!-- View Mode Toggle -->
+      <div class="btn-group">
+        <button class="btn active" id="btn-view-graph">Network Graph</button>
+        <button class="btn" id="btn-view-heatmap">Correlation Heatmap</button>
+      </div>
+
+      <!-- Export Button -->
+      <button class="btn" id="btn-export-svg" title="Export as SVG vector graphic">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        Export SVG
+      </button>
+
+      <!-- Presentation Deck Link -->
+      <a href="/presentation" target="_blank" class="btn" id="btn-open-presentation" title="Open Presentation Deck">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+        Presentation
+      </a>
+    </div>
+  </header>
+
+  <!-- Main Grid Layout -->
+  <div class="layout">
+    <!-- Left Sidebar: Controls & Stats -->
+    <aside class="sidebar">
+      <!-- Filtering Controls -->
+      <div class="sidebar-section">
+        <h2>Filters & Parameters</h2>
+        <div class="control-item">
+          <label>
+            <span>Correlation Threshold (|r|)</span>
+            <span class="val" id="threshold-val">0.35</span>
+          </label>
+          <input type="range" id="threshold-range" min="0" max="0.95" step="0.05" value="0.35">
+        </div>
+
+        <div class="control-item" style="margin-top:14px;">
+          <label><span>Method</span></label>
+          <div style="display:flex;gap:12px;font-size:13px;margin-top:4px;">
+            <label style="cursor:pointer;font-weight:normal;">
+              <input type="radio" name="corr-method" value="pearson" checked> Pearson
+            </label>
+            <label style="cursor:pointer;font-weight:normal;">
+              <input type="radio" name="corr-method" value="spearman"> Spearman
+            </label>
+          </div>
+        </div>
+
+        <div class="control-item" style="margin-top:14px;">
+          <label class="checkbox-label">
+            <input type="checkbox" id="sig-filter-check">
+            <span>Only statistically significant (p &lt; 0.05)</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Summary Statistics -->
+      <div class="sidebar-section">
+        <h2>Dataset Statistics</h2>
+        <div class="stat-item"><span>Sample size (N)</span><span id="stat-sample">–</span></div>
+        <div class="stat-item"><span>Variables (nodes)</span><span id="stat-nodes">–</span></div>
+        <div class="stat-item"><span>Active edges</span><span id="stat-edges">–</span></div>
+        <div class="stat-item"><span>Pos / Neg edges</span><span id="stat-pos-neg">–</span></div>
+        <div class="stat-item"><span>Strongest pair</span><span id="stat-strong" style="font-size:11.5px;">–</span></div>
+      </div>
+
+      <!-- Legend -->
+      <div class="sidebar-section">
+        <h2>Legend & Guide</h2>
+        <div class="legend">
+          <div class="legend-row">
+            <div class="legend-line pos"></div>
+            <span>Positive Correlation (solid)</span>
+          </div>
+          <div class="legend-row">
+            <div class="legend-line neg"></div>
+            <span>Negative Correlation (dashed)</span>
+          </div>
+          <div style="margin-top:4px;line-height:1.4;">
+            • Line width reflects correlation strength.<br/>
+            • Node size reflects degree connection strength.<br/>
+            • <b>Double-click node</b> to pin/unpin position.<br/>
+            • <b>Click edge</b> to view 2D scatter plot.
+          </div>
+        </div>
+      </div>
+
+      <!-- Node / Edge Inspector -->
+      <div class="sidebar-section">
+        <h2>Inspector</h2>
+        <div id="inspector-box">
+          <div style="color:var(--muted);">Click any node to inspect statistics, distribution histogram, and connected neighbors.</div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Canvas View Area -->
+    <main class="view-container">
+      <!-- Network Graph View -->
+      <div id="graph-view" style="width:100%;height:100%;">
+        <div id="graph-canvas-container" style="width:100%;height:100%;"></div>
+        <!-- Zoom Controls -->
+        <div class="floating-controls">
+          <button class="zoom-btn" id="btn-zoom-in" title="Zoom In">+</button>
+          <button class="zoom-btn" id="btn-zoom-out" title="Zoom Out">−</button>
+          <button class="zoom-btn" id="btn-zoom-reset" title="Reset View" style="font-size:13px;">⟲</button>
+        </div>
+      </div>
+
+      <!-- Heatmap View -->
+      <div id="heatmap-view" style="display:none;width:100%;height:100%;overflow:auto;">
+        <div id="heatmap-canvas-container" style="padding:20px;display:flex;justify-content:center;"></div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Tooltip -->
+  <div class="tooltip" id="main-tooltip"></div>
+
+  <!-- Scatter Plot Modal -->
+  <div class="modal-backdrop" id="scatter-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="scatter-title">Relationship Breakdown</h3>
+        <button class="modal-close" id="btn-close-scatter">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div id="scatter-stats" style="font-size:13px;padding:8px 12px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;margin-bottom:14px;"></div>
+        <div id="scatter-chart-container"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CSV Upload Modal -->
+  <div class="modal-backdrop" id="upload-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Upload Custom Dataset (CSV)</h3>
+        <button class="modal-close" id="btn-close-upload">&times;</button>
+      </div>
+      <form id="upload-form">
+        <div class="modal-body">
+          <div class="form-group">
+            <label for="upload-file">Select CSV File</label>
+            <input type="file" id="upload-file" accept=".csv" required>
+            <small style="color:var(--muted);display:block;margin-top:4px;">
+              CSV file should contain at least 2 numeric columns with column headers.
+            </small>
+          </div>
+          <div class="form-group">
+            <label for="upload-name">Dataset Name</label>
+            <input type="text" id="upload-name" placeholder="e.g. My Exam Cohort 2026" required>
+          </div>
+          <div class="form-group">
+            <label for="upload-desc">Description (Optional)</label>
+            <textarea id="upload-desc" rows="3" placeholder="Brief summary of the dataset..."></textarea>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn" onclick="document.getElementById('upload-modal').classList.remove('active')">Cancel</button>
+          <button type="submit" class="btn btn-primary">Import & Analyze</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script type="module" src="/static/js/app.js"></script>
+</body>
+</html>

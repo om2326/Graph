@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Correlation Network — Student Performance Dataset</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<style>
+  :root{
+    --ink:#1b2430;
+    --paper:#f6f5f2;
+    --panel:#ffffff;
+    --line:#d8d4cb;
+    --accent-pos:#2a6f6f;
+    --accent-neg:#b5482f;
+    --muted:#6b7280;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    font-family: 'Iowan Old Style','Palatino Linotype', Georgia, serif;
+    background:var(--paper);
+    color:var(--ink);
+  }
+  header{
+    padding:28px 40px 18px 40px;
+    border-bottom:1px solid var(--line);
+  }
+  header h1{
+    font-size:26px;
+    font-weight:600;
+    margin:0 0 4px 0;
+    letter-spacing:0.2px;
+  }
+  header p{
+    margin:0;
+    color:var(--muted);
+    font-size:14.5px;
+    max-width:640px;
+    line-height:1.5;
+  }
+  .layout{
+    display:grid;
+    grid-template-columns: 300px 1fr;
+    gap:0;
+    min-height: calc(100vh - 110px);
+  }
+  .panel{
+    border-right:1px solid var(--line);
+    padding:24px 26px;
+    background:var(--panel);
+  }
+  .panel h2{
+    font-size:13px;
+    text-transform:none;
+    letter-spacing:0.3px;
+    margin:0 0 14px 0;
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-weight:600;
+    color:var(--ink);
+  }
+  .control{
+    margin-bottom:22px;
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+  }
+  .control label{
+    display:flex;
+    justify-content:space-between;
+    font-size:13px;
+    color:var(--muted);
+    margin-bottom:6px;
+  }
+  .control input[type=range]{
+    width:100%;
+    accent-color:var(--accent-pos);
+  }
+  .stat-row{
+    display:flex;
+    justify-content:space-between;
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-size:13px;
+    padding:7px 0;
+    border-bottom:1px solid var(--line);
+    color:var(--ink);
+  }
+  .stat-row span:last-child{
+    font-weight:600;
+  }
+  .legend{
+    margin-top:20px;
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    font-size:12.5px;
+    color:var(--muted);
+  }
+  .legend .row{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-bottom:6px;
+  }
+  .swatch{
+    width:22px;height:3px;border-radius:2px;
+  }
+  #detail{
+    margin-top:22px;
+    font-family:'Helvetica Neue', Arial, sans-serif;
+    font-size:13px;
+    color:var(--ink);
+    min-height:60px;
+  }
+  #detail .subject-name{
+    font-weight:700;
+    font-family: 'Iowan Old Style','Palatino Linotype', Georgia, serif;
+    font-size:16px;
+    margin-bottom:6px;
+  }
+  #detail .edge-line{
+    padding:3px 0;
+    color:var(--muted);
+  }
+  .graph-area{
+    position:relative;
+    overflow:hidden;
+  }
+  svg{ width:100%; height:100%; display:block; }
+  .node circle{
+    stroke:#fff;
+    stroke-width:2px;
+    cursor:pointer;
+  }
+  .node text{
+    font-family:'Helvetica Neue', Arial, sans-serif;
+    font-size:12px;
+    fill:var(--ink);
+    pointer-events:none;
+  }
+  .link{
+    stroke-opacity:0.55;
+  }
+  .dim{ opacity:0.12; }
+  .tooltip{
+    position:absolute;
+    background:var(--ink);
+    color:#fff;
+    padding:6px 10px;
+    border-radius:4px;
+    font-family:'Helvetica Neue', Arial, sans-serif;
+    font-size:12px;
+    pointer-events:none;
+    opacity:0;
+    transition:opacity 0.1s;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Correlation Network of Student Performance</h1>
+  <p>Each node is a subject. An edge is drawn between two subjects when their marks are correlated across 60 students — the stronger the correlation, the thicker and closer the connection. Nodes computed from a real numeric matrix, not a predefined dataset.</p>
+</header>
+
+<div class="layout">
+  <div class="panel">
+    <h2>Controls</h2>
+    <div class="control">
+      <label><span>Correlation threshold</span><span id="thresh-val">0.40</span></label>
+      <input type="range" id="threshold" min="0" max="0.9" step="0.05" value="0.4">
+    </div>
+
+    <h2 style="margin-top:26px;">Dataset summary</h2>
+    <div class="stat-row"><span>Subjects (nodes)</span><span id="stat-nodes">–</span></div>
+    <div class="stat-row"><span>Students sampled</span><span id="stat-students">60</span></div>
+    <div class="stat-row"><span>Edges above threshold</span><span id="stat-edges">–</span></div>
+    <div class="stat-row"><span>Strongest pair</span><span id="stat-strong">–</span></div>
+
+    <div class="legend">
+      <div class="row"><div class="swatch" style="background:var(--accent-pos);"></div> Positive correlation</div>
+      <div class="row"><div class="swatch" style="background:var(--accent-neg);"></div> Negative correlation</div>
+      <div class="row">Thickness = |strength|. Node size = total connection strength.</div>
+    </div>
+
+    <div id="detail"><div style="color:var(--muted);">Click a subject to inspect its correlations.</div></div>
+  </div>
+
+  <div class="graph-area">
+    <svg id="chart"></svg>
+    <div class="tooltip" id="tooltip"></div>
+  </div>
+</div>
+
+<script>
+// ---------- 1. Generate a numeric dataset (60 students x 8 subjects) ----------
+// Built with deliberate underlying correlation structure so the graph has real signal.
+function randn(){
+  let u=0,v=0;
+  while(u===0) u=Math.random();
+  while(v===0) v=Math.random();
+  return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v);
+}
+
+const N = 60;
+const subjects = ["Math","Physics","Chemistry","Biology","English","History","Economics","ComputerScience"];
+
+// latent ability factors: quantitative aptitude, verbal aptitude, memory-based aptitude
+const quant = Array.from({length:N}, ()=>randn());
+const verbal = Array.from({length:N}, ()=>randn());
+const memory = Array.from({length:N}, ()=>randn());
+
+function makeCol(loadQ, loadV, loadM, noise){
+  return Array.from({length:N}, (_,i)=> 
+    70 + 12*(loadQ*quant[i] + loadV*verbal[i] + loadM*memory[i] + noise*randn())
+  );
+}
+
+const data = {
+  Math:            makeCol(1.0, 0.0, 0.1, 0.5),
+  Physics:         makeCol(0.9, 0.0, 0.1, 0.5),
+  Chemistry:       makeCol(0.7, 0.1, 0.3, 0.6),
+  ComputerScience: makeCol(0.8, 0.1, 0.0, 0.5),
+  English:         makeCol(0.0, 1.0, 0.1, 0.5),
+  History:         makeCol(0.0, 0.7, 0.5, 0.5),
+  Economics:       makeCol(0.4, 0.5, 0.2, 0.6),
+  Biology:         makeCol(0.1, 0.3, 0.8, 0.5),
+};
+
+// ---------- 2. Compute Pearson correlation matrix ----------
+function mean(arr){ return arr.reduce((a,b)=>a+b,0)/arr.length; }
+function pearson(x,y){
+  const mx=mean(x), my=mean(y);
+  let num=0, dx=0, dy=0;
+  for(let i=0;i<x.length;i++){
+    num += (x[i]-mx)*(y[i]-my);
+    dx += (x[i]-mx)**2;
+    dy += (y[i]-my)**2;
+  }
+  return num/Math.sqrt(dx*dy);
+}
+
+const corr = {};
+subjects.forEach(a=>{
+  corr[a]={};
+  subjects.forEach(b=>{
+    corr[a][b] = a===b ? 1 : pearson(data[a], data[b]);
+  });
+});
+
+// ---------- 3. Build graph structure ----------
+let nodes = subjects.map(s=>({id:s}));
+let allLinks = [];
+subjects.forEach((a,i)=>{
+  subjects.forEach((b,j)=>{
+    if(j<=i) return;
+    allLinks.push({source:a, target:b, value:corr[a][b]});
+  });
+});
+
+const svg = d3.select("#chart");
+const tooltip = d3.select("#tooltip");
+let width, height;
+
+const linkSel = svg.append("g").attr("class","links");
+const nodeSel = svg.append("g").attr("class","nodes");
+
+const simulation = d3.forceSimulation(nodes)
+  .force("charge", d3.forceManyBody().strength(-260))
+  .force("center", d3.forceCenter())
+  .force("collide", d3.forceCollide().radius(38));
+
+function degreeStrength(id, links){
+  return d3.sum(links.filter(l=>l.source===id||l.target===id||l.source.id===id||l.target.id===id), l=>Math.abs(l.value));
+}
+
+let selectedNode = null;
+
+function render(threshold){
+  const links = allLinks.filter(l=>Math.abs(l.value) >= threshold)
+    .map(l=>({source: nodes.find(n=>n.id===l.source), target: nodes.find(n=>n.id===l.target), value:l.value}));
+
+  document.getElementById("stat-nodes").textContent = subjects.length;
+  document.getElementById("stat-edges").textContent = links.length;
+  if(links.length){
+    const strongest = links.reduce((a,b)=> Math.abs(b.value)>Math.abs(a.value)?b:a);
+    document.getElementById("stat-strong").textContent =
+      `${strongest.source.id} – ${strongest.target.id} (${strongest.value.toFixed(2)})`;
+  } else {
+    document.getElementById("stat-strong").textContent = "–";
+  }
+
+  nodes.forEach(n=> n.strength = degreeStrength(n.id, links));
+  const maxStrength = d3.max(nodes, n=>n.strength) || 1;
+  const radius = d3.scaleSqrt().domain([0, maxStrength]).range([14, 34]);
+
+  simulation.force("link", d3.forceLink(links).id(d=>d.id).distance(l=> 160 - Math.abs(l.value)*100).strength(l=>Math.abs(l.value)*0.8));
+  simulation.force("charge").strength(-260);
+  simulation.alpha(0.9).restart();
+
+  const link = linkSel.selectAll("line").data(links, d=>d.source.id+"-"+d.target.id);
+  link.exit().remove();
+  const linkEnter = link.enter().append("line")
+    .attr("class","link")
+    .on("mousemove", (event,d)=>{
+      tooltip.style("opacity",1)
+        .style("left",(event.offsetX+14)+"px")
+        .style("top",(event.offsetY+6)+"px")
+        .text(`${d.source.id} ↔ ${d.target.id}: r = ${d.value.toFixed(2)}`);
+    })
+    .on("mouseleave", ()=> tooltip.style("opacity",0));
+
+  const linkMerged = linkEnter.merge(link)
+    .attr("stroke", d=> d.value>0 ? "var(--accent-pos)" : "var(--accent-neg)")
+    .attr("stroke-width", d=> 1 + Math.abs(d.value)*6);
+
+  const node = nodeSel.selectAll("g.node").data(nodes, d=>d.id);
+  const nodeEnter = node.enter().append("g").attr("class","node")
+    .call(d3.drag()
+      .on("start", (event,d)=>{ if(!event.active) simulation.alphaTarget(0.3).restart(); d.fx=d.x; d.fy=d.y; })
+      .on("drag", (event,d)=>{ d.fx=event.x; d.fy=event.y; })
+      .on("end", (event,d)=>{ if(!event.active) simulation.alphaTarget(0); d.fx=null; d.fy=null; }));
+
+  nodeEnter.append("circle");
+  nodeEnter.append("text").attr("text-anchor","middle").attr("dy", d=>4);
+
+  const nodeMerged = nodeEnter.merge(node);
+  nodeMerged.select("circle")
+    .attr("r", d=> radius(d.strength))
+    .attr("fill", (d,i)=> d3.schemeSet2[i % 8]);
+  nodeMerged.select("text")
+    .attr("y", d=> radius(d.strength)+14)
+    .text(d=>d.id);
+
+  nodeMerged.on("click",(event,d)=>{
+    selectedNode = (selectedNode===d.id) ? null : d.id;
+    updateHighlight(links);
+    showDetail(d.id, links);
+  });
+
+  simulation.on("tick", ()=>{
+    linkMerged
+      .attr("x1", d=>d.source.x).attr("y1", d=>d.source.y)
+      .attr("x2", d=>d.target.x).attr("y2", d=>d.target.y);
+    nodeMerged.attr("transform", d=>`translate(${d.x},${d.y})`);
+  });
+
+  updateHighlight(links);
+}
+
+function updateHighlight(links){
+  nodeSel.selectAll("g.node")
+    .classed("dim", d=> selectedNode && d.id!==selectedNode && !links.some(l=>
+      (l.source.id===selectedNode && l.target.id===d.id) ||
+      (l.target.id===selectedNode && l.source.id===d.id)));
+  linkSel.selectAll("line")
+    .classed("dim", d=> selectedNode && d.source.id!==selectedNode && d.target.id!==selectedNode);
+}
+
+function showDetail(id, links){
+  const related = links.filter(l=>l.source.id===id||l.target.id===id)
+    .sort((a,b)=>Math.abs(b.value)-Math.abs(a.value));
+  let html = `<div class="subject-name">${id}</div>`;
+  if(related.length===0){
+    html += `<div class="edge-line">No connections above current threshold.</div>`;
+  } else {
+    related.forEach(l=>{
+      const other = l.source.id===id ? l.target.id : l.source.id;
+      html += `<div class="edge-line">${other}: r = ${l.value.toFixed(2)}</div>`;
+    });
+  }
+  document.getElementById("detail").innerHTML = html;
+}
+
+function resize(){
+  const rect = document.querySelector(".graph-area").getBoundingClientRect();
+  width = rect.width; height = rect.height;
+  svg.attr("viewBox", [-width/2, -height/2, width, height]);
+  simulation.force("center", d3.forceCenter());
+  simulation.alpha(0.3).restart();
+}
+window.addEventListener("resize", resize);
+resize();
+
+const thresholdInput = document.getElementById("threshold");
+thresholdInput.addEventListener("input", ()=>{
+  const t = parseFloat(thresholdInput.value);
+  document.getElementById("thresh-val").textContent = t.toFixed(2);
+  render(t);
+});
+
+render(0.4);
+</script>
+</body>
+</html>

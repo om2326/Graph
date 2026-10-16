@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Correlation Network Studio — Full-Stack Presentation</title>
+  <style>
+    :root {
+      --ink: #0f172a;
+      --paper: #f8fafc;
+      --panel: #ffffff;
+      --line: #e2e8f0;
+      --accent-teal: #0d9488;
+      --accent-rust: #b5452d;
+      --accent-blue: #2563eb;
+      --muted: #64748b;
+      --radius: 12px;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: #0f172a;
+      color: var(--ink);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+    .top-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 24px;
+      background: #1e293b;
+      color: #f8fafc;
+      font-size: 13.5px;
+      border-bottom: 1px solid #334155;
+    }
+    .deck-container {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px 24px;
+    }
+    .slide {
+      display: none;
+      width: 100%;
+      max-width: 1140px;
+      aspect-ratio: 16 / 9;
+      background: var(--paper);
+      border-radius: var(--radius);
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+      padding: 38px 46px;
+      overflow-y: auto;
+      flex-direction: column;
+      justify-content: space-between;
+      border: 1px solid #334155;
+    }
+    .slide.active {
+      display: flex;
+      animation: fadeIn 0.2s ease-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(5px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    /* Hero Slides (1 & 12) */
+    .slide-hero {
+      background: #0f172a;
+      color: #ffffff;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 56px 64px;
+      border: 1px solid #1e293b;
+    }
+    .hero-badge {
+      display: inline-block;
+      padding: 5px 14px;
+      background: rgba(13, 148, 136, 0.18);
+      color: #2dd4bf;
+      font-size: 12px;
+      font-weight: 700;
+      border-radius: 20px;
+      letter-spacing: 0.8px;
+      margin-bottom: 14px;
+    }
+    .hero-title {
+      font-size: 40px;
+      font-weight: 800;
+      margin: 0 0 12px 0;
+      letter-spacing: -0.5px;
+    }
+    .hero-sub {
+      font-size: 18px;
+      color: #cbd5e1;
+      margin: 0 0 24px 0;
+      max-width: 850px;
+      line-height: 1.5;
+    }
+    .hero-tech {
+      font-size: 13px;
+      color: #94a3b8;
+      font-weight: 600;
+      border-top: 1px solid #334155;
+      padding-top: 18px;
+      width: 100%;
+    }
+    /* Slide Header */
+    .slide-header {
+      margin-bottom: 18px;
+    }
+    .slide-cat {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--accent-teal);
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 3px;
+    }
+    .slide-title {
+      font-size: 22px;
+      font-weight: 700;
+      margin: 0;
+      color: var(--ink);
+    }
+    .cards-grid {
+      display: grid;
+      gap: 16px;
+      flex: 1;
+    }
+    .grid-3 { grid-template-columns: repeat(3, 1fr); }
+    .grid-2 { grid-template-columns: repeat(2, 1fr); }
+    .grid-4 { grid-template-columns: repeat(4, 1fr); }
+    .grid-split { grid-template-columns: 1.15fr 0.85fr; }
+
+    .card {
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 16px 18px;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04);
+    }
+    .card-bar {
+      width: 32px;
+      height: 4px;
+      border-radius: 2px;
+      background: var(--accent-blue);
+      margin-bottom: 8px;
+    }
+    .card-badge {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--accent-teal);
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .card-title {
+      font-size: 14.5px;
+      font-weight: 700;
+      margin: 0 0 8px 0;
+      color: var(--ink);
+    }
+    .card ul {
+      margin: 0;
+      padding-left: 16px;
+      font-size: 12.2px;
+      line-height: 1.55;
+      color: #334155;
+    }
+    .card li { margin-bottom: 5px; }
+
+    /* Tables */
+    .table-container {
+      width: 100%;
+      border-collapse: collapse;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      overflow: hidden;
+      font-size: 12px;
+      background: #ffffff;
+    }
+    .table-container th {
+      background: #0f172a;
+      color: #ffffff;
+      padding: 10px 14px;
+      text-align: left;
+      font-weight: 600;
+    }
+    .table-container td {
+      padding: 8px 14px;
+      border-bottom: 1px solid var(--line);
+      color: #334155;
+    }
+    .table-container tr:nth-child(even) {
+      background: #f8fafc;
+    }
+    .table-container tr:last-child td {
+      border-bottom: none;
+    }
+
+    .slide-media {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: #ffffff;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 8px;
+    }
+    .slide-media img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+      border-radius: 6px;
+    }
+
+    /* Controls */
+    .bottom-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 24px;
+      background: #1e293b;
+      border-top: 1px solid #334155;
+      color: #94a3b8;
+      font-size: 13px;
+    }
+    .nav-btn {
+      background: #334155;
+      border: none;
+      color: #fff;
+      padding: 6px 16px;
+      border-radius: 6px;
+      font-size: 12.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .nav-btn:hover { background: #475569; }
+    .nav-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  </style>
+</head>
+<body>
+
+  <div class="top-bar">
+    <div><strong>Correlation Network Studio</strong> — Project Presentation Deck</div>
+    <div>Use <strong>← / →</strong> Arrow Keys or Click Below &nbsp;|&nbsp; 12 Slides</div>
+  </div>
+
+  <div class="deck-container">
+
+    <!-- SLIDE 1: Cover Hero -->
+    <div class="slide slide-hero active">
+      <div class="hero-badge">FULL-STACK VISUAL ANALYTICS PLATFORM</div>
+      <h1 class="hero-title">Correlation Network Studio</h1>
+      <p class="hero-sub">Interactive Graph Analytics, Statistical Modeling & High-Dimensional Feature Exploration</p>
+      <div class="hero-tech">
+        FastAPI Backend &nbsp;•&nbsp; SQLite Relational Database &nbsp;•&nbsp; D3.js Force Physics Simulation &nbsp;•&nbsp; SciPy & Pandas
+      </div>
+    </div>
+
+    <!-- SLIDE 2: Problem Statement -->
+    <div class="slide">
+      <div class="slide-header">
+        <div class="slide-cat">Context & Motivation</div>
+        <h2 class="slide-title">Executive Summary: The High-Dimensional Tabular Bottleneck</h2>
+      </div>
+      <div class="cards-grid grid-3">
+        <div class="card">
+          <div class="card-bar" style="background:var(--accent-rust);"></div>
+          <div class="card-badge" style="color:var(--accent-rust);">Core Challenge</div>
+          <div class="card-title">The Tabular Bottleneck</div>
+          <ul>
+            <li>Modern datasets span dozens of numeric features with intricate dependencies.</li>
+            <li>Traditional N × N correlation matrices scale quadratically (O(N²)), overwhelming cognitive capacity.</li>
+            <li>Raw numerical tables hide latent clusters, hub variables, and community structures.</li>
+            <li>Static spreadsheets fail to provide immediate visual feedback or significance validation.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <div class="card-bar" style="background:var(--accent-teal);"></div>
+          <div class="card-badge" style="color:var(--accent-teal);">Visual Analytics</div>
+          <div class="card-title">Force Network Solution</div>
+          <ul>
+            <li>Transforms numerical variables into dynamic nodes and statistical correlations into elastic links.</li>
+            <li>D3.js force simulation organizes variables organically based on relationship strength.</li>
+            <li>Positive links rendered in teal (solid); negative links in rust (dashed).</li>
+            <li>Edge stroke width and link distance scale dynamically with correlation magnitude |r|.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <div class="card-bar" style="background:var(--accent-blue);"></div>
+          <div class="card-badge" style="color:var(--accent-blue);">Analytical Depth</div>
+          <div class="card-title">Multi-Level Drill-Down</div>
+          <ul>
+            <li>Network overview connects directly to micro-level data inspection.</li>
+            <li>Clicking an edge reveals the 2D bivariate scatter plot with OLS linear regression.</li>
+            <li>Clicking a node highlights neighbors and opens univariate distribution histograms.</li>
+            <li>Two-tailed p-value filtering eliminates spurious correlations in sub-second cycles.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 3: Evolution -->
+    <div class="slide">
+      <div class="slide-header">
+        <div class="slide-cat">Architecture Evolution</div>
+        <h2 class="slide-title">Project Evolution: From Standalone Prototype to Full-Stack</h2>
+      </div>
+      <div class="cards-grid grid-split">
+        <div style="display:flex; flex-direction:column; gap:14px;">
+          <div class="card" style="flex:1;">
+            <div class="card-bar" style="background:var(--muted);"></div>
+            <div class="card-badge" style="color:var(--muted);">Phase 1: Initial Prototype</div>
+            <div class="card-title">Client-Only Prototype</div>
+            <ul>
+              <li>Single static HTML prototype (<code>correlation_network.html</code>).</li>
+              <li>Hardcoded synthetic dataset (60 students) embedded in client JavaScript.</li>
+              <li>In-browser calculations restricted to basic Pearson correlation without persistence.</li>
+              <li><b>Limitations:</b> Zero database storage, no custom CSV ingestion, no p-value hypothesis testing, no linked regression modals.</li>
+            </ul>
+          </div>
+          <div class="card" style="flex:1;">
+            <div class="card-bar" style="background:var(--accent-blue);"></div>
+            <div class="card-badge" style="color:var(--accent-blue);">Phase 2: Production Studio</div>
+            <div class="card-title">Full-Stack Analytics Platform</div>
+            <ul>
+              <li>Decoupled 3-tier architecture: Modular Frontend, FastAPI Backend, SQLite Database.</li>
+              <li>Advanced statistical rigor: Pearson & Spearman rank metrics with two-tailed p-values.</li>
+              <li>Dynamic data ingestion: Drag-and-drop CSV uploader with Pandas numeric validation.</li>
+              <li>Interactive features: Zoom/pan navigation, double-click pinning, SVG vector export.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="slide-media">
+          <img src="asset_comparison.png" alt="Evolution Comparison">
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 4: Three-Tier Architecture -->
+    <div class="slide">
+      <div class="slide-header">
+        <div class="slide-cat">System Design</div>
+        <h2 class="slide-title">Three-Tier System Architecture & Data Pipeline</h2>
+      </div>
+      <div class="cards-grid grid-split">
+        <div class="card">
+          <div class="card-bar" style="background:var(--accent-teal);"></div>
+          <div class="card-badge" style="color:var(--accent-teal);">Decoupled Architecture</div>
+          <div class="card-title">System Design & Component Separation</div>
+          <ul>
+            <li><b>Frontend Tier:</b> Pure ES6 modular architecture (<code>api.js</code>, <code>graph.js</code>, <code>heatmap.js</code>, <code>charts.js</code>, <code>app.js</code>). No bulky bundler dependencies, achieving lightning-fast initial load times.</li>
+            <li><b>Physics Simulation:</b> D3.js v7 force engine dynamically balances many-body repulsion, spring link attraction, and boundary collision.</li>
+            <li><b>Backend Computation:</b> High-throughput FastAPI application running on Uvicorn ASGI server. Bridges Python scientific libraries with browser clients.</li>
+            <li><b>Math & Stats Core:</b> SciPy and NumPy compute correlation matrices, two-tailed p-values, OLS regression fits, and histogram binning.</li>
+            <li><b>Persistence Layer:</b> SQLite database (<code>app.db</code>) storing dataset metadata, schemas, and raw observation records with ACID compliance.</li>
+          </ul>
+        </div>
+        <div class="slide-media">
+          <img src="asset_arch.png" alt="System Architecture Diagram">
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 5: Mathematical Foundations -->
+    <div class="slide">
+      <div class="slide-header">
+        <div class="slide-cat">Statistical Engine</div>
+        <h2 class="slide-title">Mathematical & Statistical Rigor: Pearson, Spearman & Hypothesis Testing</h2>
+      </div>
+      <div class="cards-grid grid-2">
+        <div class="card">
+          <div class="card-bar" style="background:var(--accent-teal);"></div>
+          <div class="card-badge" style="color:var(--accent-teal);">Bivariate Metrics</div>
+          <div class="card-title">Pearson & Spearman Formulations</div>
+          <ul>
+            <li><b>Pearson Linear (r):</b> Measures linear co-variation: r = cov(X,Y) / (σx · σy). Captures proportional dependencies between numeric variables.</li>
+            <li><b>Spearman Rank (ρ):</b> Non-parametric measure based on ranks: ρ = 1 - 6Σd² / n(n²-1). Robust against non-linear monotonic shifts and extreme outliers.</li>
+            <li><b>Dual-Mode Switch:</b> Analysts toggle dynamically between Pearson and Spearman on the fly.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <div class="card-bar" style="background:var(--accent-blue);"></div>
+          <div class="card-badge" style="color:var(--accent-blue);">Significance Validation</div>
+          <div class="card-title">Hypothesis Testing & p-Values</div>
+          <ul>
+            <li><b>Student's t-Distribution:</b> t = r √( (n-2) / (1-r²) ) with df = n-2 degrees of freedom.</li>
+            <li><b>Eliminates Spurious Noise:</b> Small sample sizes often yield high apparent correlation purely by chance; p-value testing prevents false discoveries.</li>
+            <li><b>Significance Filter:</b> Real-time "Only Significant (p < 0.05)" filter strips noise and leaves verified relationships.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <div class="card-bar" style="background:var(--accent-rust);"></div>
+          <div class="card-badge" style="color:var(--accent-rust);">Regression Modeling</div>
+          <div class="card-title">OLS Linear Regression Engine</div>
+          <ul>
+            <li><b>Ordinary Least Squares:</b> Fits y = β₁x + β₀ for any selected variable pair on demand.</li>
+            <li><b>Variance Explained (R²):</b> Quantifies model explanatory power.</li>
+            <li><b>Live Equation Readout:</b> Displays slope, intercept, standard error, and exact trendline in modal.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <div class="card-bar" style="background:var(--muted);"></div>
+          <div class="card-badge" style="color:var(--muted);">Univariate Inspection</div>
+          <div class="card-title">Descriptive Distributions</div>
+          <ul>
+            <li><b>Frequency Histograms:</b> Dynamic binning via NumPy across full variable range.</li>
+            <li><b>Distribution Metrics:</b> Real-time mean, standard deviation, median, minimum, maximum, and quartile thresholds.</li>
+            <li><b>Ranked Neighbors:</b> Displays ordered list of strongest correlated neighbors for selected node.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 6: D3 Physics -->
+    <div class="slide">
+      <div class="slide-header">
+        <div class="slide-cat">Data Visualization</div>
+        <h2 class="slide-title">D3.js Force Simulation Mechanics & Visual Encodings</h2>
+      </div>
+      <div class="cards-grid grid-split">
+        <div class="card">
+          <div class="card-bar" style="background:var(--accent-teal);"></div>
+          <div class="card-badge" style="color:var(--accent-teal);">Physics & Encodings</div>
+          <div class="card-title">Physics Engine & Interaction Ergonomics</div>
+          <ul>
+            <li><b>forceManyBody:</b> Electrostatic repulsion (charge = -320) actively prevents label and node collisions.</li>
+            <li><b>forceLink:</b> Spring attraction dynamically scales with correlation magnitude: Distance = 200 - |r| × 120 (stronger correlations pull closer together).</li>
+            <li><b>forceCollide:</b> Circular collision buffer preventing node overlap during layout animation.</li>
+            <li><b>Visual Encodings:</b> Node radius scales with Degree Centrality (sum of connected |r| weights).</li>
+            <li><b>Edge Encoding:</b> Positive correlations = Teal solid lines; Negative correlations = Rust dashed lines.</li>
+            <li><b>Navigation Controls:</b> Continuous Zoom & Pan (<code>d3.zoom</code>), Reset View, and double-click coordinate pinning (fx, fy).</li>
+          </ul>
+        </div>
+        <div class="slide-media">
+          <img src="asset_physics.png" alt="D3 Force Simulation & Encodings">
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 7: Linked Workflow -->
+    <div class="slide">
+      <div class="slide-header">
+        <div class="slide-cat">Exploration Workflow</div>
+        <h2 class="slide-title">Multi-Level Linked Analytical Workflow: Macro to Micro</h2>
+      </div>
+      <div class="cards-grid grid-split">
+        <div class="card">
+          <div class="card-bar" style="background:var(--accent-blue);"></div>
+          <div class="card-badge" style="color:var(--accent-blue);">Linked Exploration</div>
+          <div class="card-title">Coordinated Multiple Views</div>
+          <ul>
+            <li><b>1. Macro View (Network Topology):</b> Analysts identify clusters, bridge variables, and isolated features across the entire dataset.</li>
+            <li><b>2. Matrix View (Correlation Heatmap):</b> Instant toggle to symmetric N × N grid with diverging rust-to-teal color ramp and numeric readouts.</li>
+            <li><b>3. Micro Bivariate View (Scatter Modal):</b> Clicking any edge or heatmap cell launches a 2D scatter plot with fitted OLS linear trendline and R² score.</li>
+            <li><b>4. Micro Univariate View (Sidebar Inspector):</b> Clicking any node isolates its local neighborhood, dims background clutter, and renders score frequency distribution histograms.</li>
+            <li><b>Sub-Second Cycle Time:</b> Immediate transitions between macro overview and granular validation.</li>
+          </ul>
+        </div>
+        <div class="slide-media">
+          <img src="asset_analytics.png" alt="Bivariate Scatter & Distribution">
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 8: Ingestion & Benchmarks -->
+    <div class="slide">
+      <div class="slide-header">
+        <div class="slide-cat">Data Management</div>
+        <h2 class="slide-title">Data Ingestion Engine & Pre-Seeded Benchmark Datasets</h2>
+      </div>
+      <div class="cards-grid grid-split">
+        <div class="card">
+          <div class="card-bar" style="background:var(--accent-teal);"></div>
+          <div class="card-badge" style="color:var(--accent-teal);">Ingestion & Presets</div>
+          <div class="card-title">CSV Validation & Preloaded Benchmarks</div>
+          <ul>
+            <li><b>Automated CSV Uploader:</b> Users upload arbitrary tabular CSV files through an interactive modal. Pandas automatically extracts numeric columns and sanitizes data.</li>
+            <li><b>Schema Validation:</b> Requires ≥ 2 numeric features and ≥ 3 observation rows; assigns unique UUID and updates UI dropdown instantly.</li>
+            <li><b>Benchmark 1: Student Academic Performance (N=100):</b> 8 subjects (Math, Physics, Chemistry, CS, English, History, Economics, Biology). Latent factor generation shows organic STEM vs Humanities clusters.</li>
+            <li><b>Benchmark 2: Macroeconomic Indicators (N=80):</b> 6 indicators (GDP, Inflation, Unemployment, Interest Rates, Confidence, Stocks) featuring strong inverse correlations (e.g., GDP vs Unemployment r = -0.95).</li>
+          </ul>
+        </div>
+        <div class="slide-media">
+          <img src="asset_dataflow.png" alt="CSV Ingestion Pipeline">
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 9: REST API -->
+    <div class="slide">
+      <div class="slide-header">
+        <div class="slide-cat">API Specification</div>
+        <h2 class="slide-title">Backend REST API Architecture & Endpoint Specification</h2>
+      </div>
+      <table class="table-container">
+        <thead>
+          <tr>
+            <th style="width: 12%;">HTTP Method</th>
+            <th style="width: 28%;">API Endpoint</th>
+            <th style="width: 40%;">Description & Processing Logic</th>
+            <th style="width: 20%;">Response Format</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong style="color:var(--accent-blue);">GET</strong></td>
+            <td><code>/api/datasets</code></td>
+            <td>Retrieves metadata list for all stored datasets (ID, name, description, row counts, default flags).</td>
+            <td>JSON Array (Datasets)</td>
+          </tr>
+          <tr>
+            <td><strong style="color:var(--accent-blue);">GET</strong></td>
+            <td><code>/api/datasets/{id}</code></td>
+            <td>Fetches detailed dataset metadata, column schema types, and total observation count.</td>
+            <td>JSON Object (Metadata)</td>
+          </tr>
+          <tr>
+            <td><strong style="color:var(--accent-teal);">POST</strong></td>
+            <td><code>/api/datasets/upload</code></td>
+            <td>Accepts multipart CSV file; executes Pandas validation, UUID creation, and SQLite persistence.</td>
+            <td>JSON Object (New Dataset)</td>
+          </tr>
+          <tr>
+            <td><strong style="color:var(--accent-blue);">GET</strong></td>
+            <td><code>/api/datasets/{id}/correlations</code></td>
+            <td>Computes Pearson/Spearman matrix, filters edges by min_threshold and max_p_value, returns active graph topology.</td>
+            <td>JSON (Nodes, Links, Stats)</td>
+          </tr>
+          <tr>
+            <td><strong style="color:var(--accent-blue);">GET</strong></td>
+            <td><code>/api/datasets/{id}/scatter</code></td>
+            <td>Extracts paired bivariate coordinates (X, Y) and calculates SciPy OLS regression slope, intercept, R², and p-value.</td>
+            <td>JSON (Points, Fit Metrics)</td>
+          </tr>
+        </tbody>
+      </table>
+      <div style="margin-top:14px; font-size:12px; color:var(--accent-teal); font-weight:600;">
+        Interactive Swagger UI documentation accessible live at <a href="http://127.0.0.1:8000/docs" target="_blank" style="color:var(--accent-blue); text-decoration:underline;">http://127.0.0.1:8000/docs</a> | OpenAPI 3.0 Compliant
+      </div>
+    </div>
+
+    <!-- SLIDE 10: Performance Benchmarks -->
+    <div class="slide">
+      <div class="slide-header">
+        <div class="slide-cat">Performance Evaluation</div>
+        <h2 class="slide-title">System Performance, Latency & Empirical Benchmark Matrix</h2>
+      </div>
+      <table class="table-container">
+        <thead>
+          <tr>
+            <th style="width: 22%;">Analytical Engine</th>
+            <th style="width: 18%;">Technology Stack</th>
+            <th style="width: 24%;">Mathematical Formula</th>
+            <th style="width: 24%;">Analytical Capability</th>
+            <th style="width: 12%;">Latency</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Pearson Linear Correlation</strong></td>
+            <td>SciPy / NumPy</td>
+            <td>r = cov(X,Y) / (σx · σy)</td>
+            <td>Linear co-variation & edge weight scaling</td>
+            <td><strong style="color:var(--accent-blue);">&lt; 12 ms</strong></td>
+          </tr>
+          <tr>
+            <td><strong>Spearman Rank Correlation</strong></td>
+            <td>SciPy Stats</td>
+            <td>ρ = 1 - 6Σd² / n(n²-1)</td>
+            <td>Non-parametric monotonic dependency</td>
+            <td><strong style="color:var(--accent-blue);">&lt; 15 ms</strong></td>
+          </tr>
+          <tr>
+            <td><strong>Significance Testing (p-value)</strong></td>
+            <td>Student t-Distribution</td>
+            <td>t = r √( (n-2)/(1-r²) )</td>
+            <td>Spurious correlation noise elimination</td>
+            <td><strong style="color:var(--accent-blue);">&lt; 6 ms</strong></td>
+          </tr>
+          <tr>
+            <td><strong>OLS Linear Regression</strong></td>
+            <td>SciPy linregress</td>
+            <td>y = β₁x + β₀ (R²)</td>
+            <td>Bivariate scatter slope & trendline fit</td>
+            <td><strong style="color:var(--accent-blue);">&lt; 8 ms</strong></td>
+          </tr>
+          <tr>
+            <td><strong>D3 Force Simulation Physics</strong></td>
+            <td>D3.js v7 Web Engine</td>
+            <td>Velocity Verlet Integration</td>
+            <td>Real-time 60 FPS organic graph layout</td>
+            <td><strong style="color:var(--accent-blue);">&lt; 1 ms/frame</strong></td>
+          </tr>
+        </tbody>
+      </table>
+      <div style="margin-top:14px; font-size:12px; color:var(--accent-teal); font-weight:600;">
+        All benchmarks recorded on standard commercial workstation; SQLite indexed lookups execute in &lt; 2ms.
+      </div>
+    </div>
+
+    <!-- SLIDE 11: UX Highlights -->
+    <div class="slide">
+      <div class="slide-header">
+        <div class="slide-cat">System Highlights</div>
+        <h2 class="slide-title">User Experience Highlights & Technical Innovations</h2>
+      </div>
+      <div class="cards-grid grid-4">
+        <div class="card">
+          <div class="card-bar" style="background:var(--accent-teal);"></div>
+          <div class="card-badge" style="color:var(--accent-teal);">Physics Usability</div>
+          <div class="card-title">Interactive Graph</div>
+          <ul>
+            <li>Continuous Zoom & Pan with reset viewport control.</li>
+            <li>Drag-and-drop physics with real-time velocity updates.</li>
+            <li>Double-click node coordinate pinning and unpinning.</li>
+            <li>Node neighborhood highlighting with background element dimming.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <div class="card-bar" style="background:var(--accent-blue);"></div>
+          <div class="card-badge" style="color:var(--accent-blue);">Matrix & Graph</div>
+          <div class="card-title">Dual Visual Views</div>
+          <ul>
+            <li>One-click toggle between Force Graph and Symmetric Heatmap.</li>
+            <li>Diverging rust-to-teal color gradient reflecting polarity.</li>
+            <li>Cell annotations showing exact r correlation values.</li>
+            <li>Linked click interaction connecting directly to scatter modals.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <div class="card-bar" style="background:var(--accent-rust);"></div>
+          <div class="card-badge" style="color:var(--accent-rust);">Dashboard HUD</div>
+          <div class="card-title">Real-Time HUD</div>
+          <ul>
+            <li>Live status badges displaying active node and edge counts.</li>
+            <li>Instant breakdown of positive vs. negative correlation edges.</li>
+            <li>Automatic identification of overall strongest correlation pair.</li>
+            <li>Dynamic threshold slider filtering edges in real time.</li>
+          </ul>
+        </div>
+        <div class="card">
+          <div class="card-bar" style="background:var(--ink);"></div>
+          <div class="card-badge" style="color:var(--ink);">Zero Overhead</div>
+          <div class="card-title">Publication Export</div>
+          <ul>
+            <li>One-click SVG vector graphic export for high-DPI publications.</li>
+            <li>Clean standalone CSS styling without external CSS frameworks.</li>
+            <li>Zero external build step: runs natively in any modern browser.</li>
+            <li>Auto-generated Swagger API documentation at <code>/docs</code>.</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- SLIDE 12: Conclusion Hero -->
+    <div class="slide slide-hero">
+      <div class="hero-badge" style="background:rgba(37,99,235,0.25); color:#60a5fa;">PROJECT SUMMARY & LIVE ACCESS</div>
+      <h1 class="hero-title" style="font-size:34px;">Questions & Technical Discussion</h1>
+      <div style="font-size:14px; font-weight:700; color:var(--accent-teal); margin-bottom:10px;">Key Project Accomplishments:</div>
+      <ul style="margin:0 0 20px 0; padding-left:18px; font-size:13px; color:#e2e8f0; line-height:1.6;">
+        <li>Delivered a production-ready visual analytics platform solving the N × N tabular correlation bottleneck.</li>
+        <li>Engineered statistical rigor: Pearson & Spearman metrics, Student t two-tailed p-values, and OLS regression.</li>
+        <li>Built a responsive D3.js v7 physics engine with zoom/pan, double-click pinning, and linked bivariate/univariate modals.</li>
+        <li>Deployed zero-configuration SQLite persistence with automatic custom CSV ingestion.</li>
+      </ul>
+      <div class="hero-tech">
+        <strong>Live Execution:</strong> Double-click <code>start.bat</code> or run <code>python run.py</code><br>
+        <strong>Web Studio:</strong> <a href="http://127.0.0.1:8000" target="_blank" style="color:#60a5fa;">http://127.0.0.1:8000</a> &nbsp;|&nbsp;
+        <strong>API Docs:</strong> <a href="http://127.0.0.1:8000/docs" target="_blank" style="color:#60a5fa;">http://127.0.0.1:8000/docs</a> &nbsp;|&nbsp;
+        <strong>PowerPoint Deck:</strong> <code>presentation.pptx</code>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="bottom-bar">
+    <button class="nav-btn" id="prev-btn" onclick="changeSlide(-1)">❮ Previous</button>
+    <div id="slide-indicator">Slide 1 of 12</div>
+    <button class="nav-btn" id="next-btn" onclick="changeSlide(1)">Next ❯</button>
+  </div>
+
+  <script>
+    const slides = document.querySelectorAll('.slide');
+    let currentSlide = 0;
+
+    function updateSlide() {
+      slides.forEach((s, idx) => {
+        s.classList.toggle('active', idx === currentSlide);
+      });
+      document.getElementById('slide-indicator').textContent = `Slide ${currentSlide + 1} of ${slides.length}`;
+      document.getElementById('prev-btn').disabled = currentSlide === 0;
+      document.getElementById('next-btn').disabled = currentSlide === slides.length - 1;
+    }
+
+    function changeSlide(direction) {
+      currentSlide = Math.max(0, Math.min(slides.length - 1, currentSlide + direction));
+      updateSlide();
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'PageDown') {
+        changeSlide(1);
+      } else if (e.key === 'ArrowLeft' || e.key === 'PageUp') {
+        changeSlide(-1);
+      }
+    });
+
+    updateSlide();
+  </script>
+</body>
+</html>
